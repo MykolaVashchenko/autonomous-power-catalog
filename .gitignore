@@ -13,3 +13,5 @@ server/node_modules/
 Thumbs.db
 
 npm-debug.log*
+
+test.rest
