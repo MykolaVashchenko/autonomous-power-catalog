@@ -2,6 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const { ApolloServer } = require('@apollo/server');
+const { expressMiddleware } = require('@apollo/server/express4');
+const { typeDefs, resolvers } = require('./graphql/index');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -20,6 +23,20 @@ app.get('/', (req, res) => {
     res.send('Server is running');
 });
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+async function startServer() {
+    const server = new ApolloServer({
+        typeDefs,
+        resolvers,
+    });
+
+    await server.start();
+
+    app.use('/graphql', expressMiddleware(server));
+
+    app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+        console.log(`GraphQL API is ready at http://localhost:${PORT}/graphql`);
+    });
+}
+
+startServer();
