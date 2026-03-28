@@ -9,22 +9,31 @@ const resourceSchema = new mongoose.Schema({
     category: {
         type: String,
         required: true,
-        enum: ['Battery', 'Inverter', 'Solar Panel', 'BMS', 'Accessories'], // Обмеження категорій
-        default: 'Battery'
+        enum: ['battery', 'inverter', 'solar_panel', 'bms', 'accessories'],
+        default: 'battery'
     },
-    brand: { type: String, required: true },
+    brand: {
+        type: String,
+        required: true
+    },
+    model: {
+        type: String,
+        required: true
+    },
     price: {
         type: Number,
         required: true,
         min: [0, 'Price cannot be negative']
     },
+
     specifications: {
-        voltage: { type: Number },
-        capacity: { type: String },
-        weight: { type: Number }
+        type: Object,
+        default: {}
     },
     description: { type: String },
-    inStock: { type: Boolean, default: true }
+    inStock: { type: Boolean, default: true },
+
+    imageUrl: { type: String }
 }, {
     timestamps: true
 });

@@ -25,7 +25,6 @@ function Authorization() {
 
         if (isLogin) {
             try {
-                // Відправляємо запит на логін
                 const response = await axios.post('/api/auth/login', { email, password });
                 setMessage(response.data.message);
 
@@ -36,6 +35,7 @@ function Authorization() {
 
                 localStorage.setItem('token', response.data.token);
                 localStorage.setItem('userEmail', response.data.user.email);
+                localStorage.setItem('userRole', response.data.user.role);
 
                 window.location.href = '/profile';
             } catch (err) {

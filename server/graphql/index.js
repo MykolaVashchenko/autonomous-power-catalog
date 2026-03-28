@@ -2,17 +2,22 @@ const Resource = require('../models/resource');
 
 const typeDefs = `#graphql
   type Specifications {
-    voltage: Int
+    formFactor: String
     capacity: String
-    weight: Float
+    voltage: String
+    power: String
+    waveType: String
+    inputVoltage: String
   }
 
   type Resource {
-    id: ID!
+    _id: ID!
     title: String!
     category: String!
-    brand: String!
-    price: Float!
+    brand: String
+    model: String
+    price: Float     
+    imageUrl: String
     specifications: Specifications
     description: String
   }
@@ -23,7 +28,7 @@ const typeDefs = `#graphql
   }
 
   type Mutation {
-    addResource(title: String!, category: String!, brand: String!, price: Float!, description: String): Resource
+    addResource(title: String!, category: String!, brand: String!, model: String!, price: Float!, imageUrl: String, description: String): Resource
     deleteResource(id: ID!): String
   }
 `;

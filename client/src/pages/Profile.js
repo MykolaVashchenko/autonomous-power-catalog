@@ -1,14 +1,12 @@
 import React from 'react';
 
 function Profile() {
-    // Дістаємо пошту з пам'яті браузера
     const email = localStorage.getItem('userEmail');
 
     const handleLogout = () => {
-        // При виході видаляємо всі дані
         localStorage.removeItem('token');
         localStorage.removeItem('userEmail');
-        // Перекидаємо на головну сторінку
+        localStorage.removeItem('userRole')
         window.location.href = '/';
     };
 
