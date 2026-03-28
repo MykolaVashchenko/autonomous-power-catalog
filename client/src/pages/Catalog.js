@@ -19,23 +19,27 @@ function Catalog() {
             try {
                 let fetchedData = [];
                 if (apiType === 'rest') {
-                    const response = await axios.get('/api/resources');
+                    const response = await axios.get(`/api/resources?role=${userRole}`);
                     fetchedData = response.data;
                 } else {
                     const graphqlQuery = {
                         query: `{
                             getResources {
-                                _id title category brand model price imageUrl
+                                _id title category brand model price imageUrl isActive
                             }
                         }`
                     };
                     const response = await axios.post('/graphql', graphqlQuery);
 
                     if (response.data.errors) {
-                        console.error("GraphQL помилки:", response.data.errors);
-                        throw new Error("GraphQL повернув помилку. Відкрийте консоль (F12) для деталей.");
+                        throw new Error("GraphQL Error");
                     }
+
                     fetchedData = response.data.data.getResources || [];
+
+                    if (userRole !== 'admin') {
+                        fetchedData = fetchedData.filter(item => item.isActive);
+                    }
                 }
                 setResources(fetchedData);
                 setLoading(false);
@@ -46,26 +50,31 @@ function Catalog() {
             }
         };
         fetchResources();
-    }, [apiType]);
+    }, [apiType, userRole]);
 
     const handleDelete = async (id, title) => {
-        if (!window.confirm(`Ви впевнені, що хочете видалити "${title}"?`)) {
-            return;
-        }
-
+        if (!window.confirm(`Ви впевнені, що хочете видалити "${title}"?`)) return;
         try {
-            await axios.delete(`/api/resources/${id}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
+            await axios.delete(`/api/resources/${id}`, { headers: { Authorization: `Bearer ${token}` }});
+            setResources(resources.filter(item => item._id !== id));
+        } catch (err) {
+            alert(err.response?.data?.message || 'Помилка при видаленні товару');
+        }
+    };
+
+    const handleToggleStatus = async (id) => {
+        try {
+            await axios.patch(`/api/resources/${id}/toggle-status`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
             });
 
-            setResources(resources.filter(item => item._id !== id));
-            console.log(`Товар "${title}" видалено`);
-
+            // Оновлюємо стан React, щоб миттєво перемалювати картку
+            setResources(resources.map(item =>
+                item._id === id ? { ...item, isActive: !item.isActive } : item
+            ));
         } catch (err) {
-            console.error("Помилка видалення:", err);
-            alert(err.response?.data?.message || 'Помилка при видаленні товару');
+            console.error("Помилка зміни статусу:", err);
+            alert('Не вдалося змінити статус товару');
         }
     };
 
@@ -85,28 +94,10 @@ function Catalog() {
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
             <h1 style={{ textAlign: 'center', marginBottom: '20px', color: '#333' }}>Каталог Ресурсів</h1>
 
+            {/* Кнопка "Додати товар" */}
             {userRole === 'admin' && (
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
-                    <button
-                        onClick={() => navigate('/admin')} // Перекидає на твою існуючу форму
-                        style={{
-                            padding: '12px 24px',
-                            backgroundColor: '#28a745',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '16px',
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                            transition: '0.3s',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                        }}
-                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#218838'}
-                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#28a745'}
-                    >
+                    <button onClick={() => navigate('/admin')} style={{ padding: '12px 24px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
                         <span>➕</span> Додати новий товар
                     </button>
                 </div>
@@ -130,67 +121,34 @@ function Catalog() {
                             border: '1px solid #e0e0e0',
                             borderRadius: '8px',
                             overflow: 'hidden',
-                            backgroundColor: '#fff',
+                            // ВІЗУАЛ: Якщо неактивний, робимо фон сірим і трохи прозорим
+                            backgroundColor: item.isActive ? '#fff' : '#f8f9fa',
+                            opacity: item.isActive ? 1 : 0.6,
                             boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                             display: 'flex',
                             flexDirection: 'column',
                             position: 'relative'
                         }}>
 
+                            {userRole === 'admin' && !item.isActive && (
+                                <div style={{ position: 'absolute', top: '10px', left: '10px', backgroundColor: '#dc3545', color: 'white', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', zIndex: 10 }}>
+                                    Чернетка
+                                </div>
+                            )}
+
                             {userRole === 'admin' && (
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '10px',
-                                    right: '10px',
-                                    display: 'flex',
-                                    gap: '5px',
-                                    zIndex: 10
-                                }}>
-                                    <button
-                                        onClick={() => handleEdit(item._id)}
-                                        title="Редагувати товар"
-                                        style={{
-                                            width: '30px',
-                                            height: '30px',
-                                            backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '50%',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            justifyContent: 'center',
-                                            alignItems: 'center',
-                                            fontSize: '14px',
-                                            transition: '0.2s',
-                                            color: '#555'
-                                        }}
-                                        onMouseOver={(e) => {e.currentTarget.style.backgroundColor = '#e0f7fa'; e.currentTarget.style.color = '#007bff';}}
-                                        onMouseOut={(e) => {e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.8)'; e.currentTarget.style.color = '#555';}}
-                                    >
-                                        ✏️
-                                    </button>
+                                <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '5px', zIndex: 10 }}>
 
                                     <button
-                                        onClick={() => handleDelete(item._id, item.title)}
-                                        title="Видалити товар"
-                                        style={{
-                                            width: '30px',
-                                            height: '30px',
-                                            backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '50%',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            justifyContent: 'center',
-                                            alignItems: 'center',
-                                            fontSize: '14px',
-                                            transition: '0.2s',
-                                            color: '#555'
-                                        }}
-                                        onMouseOver={(e) => {e.currentTarget.style.backgroundColor = '#ffebee'; e.currentTarget.style.color = 'red';}}
-                                        onMouseOut={(e) => {e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.8)'; e.currentTarget.style.color = '#555';}}
+                                        onClick={() => handleToggleStatus(item._id)}
+                                        title={item.isActive ? "Приховати (Зробити чернеткою)" : "Опублікувати"}
+                                        style={{ width: '30px', height: '30px', backgroundColor: 'rgba(255, 255, 255, 0.9)', border: '1px solid #ccc', borderRadius: '50%', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '14px' }}
                                     >
-                                        ❌
+                                        {item.isActive ? '🙈' : '👁️'}
                                     </button>
+
+                                    <button onClick={() => handleEdit(item._id)} title="Редагувати" style={{ width: '30px', height: '30px', backgroundColor: 'rgba(255, 255, 255, 0.9)', border: '1px solid #ccc', borderRadius: '50%', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '14px' }}>✏️</button>
+                                    <button onClick={() => handleDelete(item._id, item.title)} title="Видалити" style={{ width: '30px', height: '30px', backgroundColor: 'rgba(255, 255, 255, 0.9)', border: '1px solid #ccc', borderRadius: '50%', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '14px' }}>❌</button>
                                 </div>
                             )}
 
@@ -203,18 +161,17 @@ function Catalog() {
                             </div>
 
                             <div style={{ padding: '15px', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-                                <div style={{ fontSize: '12px', color: '#888', textTransform: 'uppercase', marginBottom: '5px' }}>
-                                    {categoryNames[item.category] || item.category}
-                                </div>
+                                <div style={{ fontSize: '12px', color: '#888', textTransform: 'uppercase', marginBottom: '5px' }}>{categoryNames[item.category] || item.category}</div>
                                 <h3 style={{ margin: '0 0 10px 0', fontSize: '18px', color: '#333' }}>{item.title}</h3>
                                 <p style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#666', flexGrow: 1 }}>
                                     <strong>Бренд:</strong> {item.brand} <br/>
                                     <strong>Модель:</strong> {item.model}
                                 </p>
-
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
                                     <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#28a745' }}>{item.price} ₴</span>
-                                    <button style={{ padding: '8px 15px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Детальніше</button>
+                                    <button disabled={!item.isActive} style={{ padding: '8px 15px', backgroundColor: item.isActive ? '#007bff' : '#ccc', color: 'white', border: 'none', borderRadius: '4px', cursor: item.isActive ? 'pointer' : 'not-allowed', fontWeight: 'bold' }}>
+                                        Детальніше
+                                    </button>
                                 </div>
                             </div>
                         </div>

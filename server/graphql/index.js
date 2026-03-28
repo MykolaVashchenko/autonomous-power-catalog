@@ -20,6 +20,7 @@ const typeDefs = `#graphql
     imageUrl: String
     specifications: Specifications
     description: String
+    isActive: Boolean
   }
 
   type Query {
@@ -30,6 +31,7 @@ const typeDefs = `#graphql
   type Mutation {
     addResource(title: String!, category: String!, brand: String!, model: String!, price: Float!, imageUrl: String, description: String): Resource
     deleteResource(id: ID!): String
+    toggleResourceStatus(id: ID!): Resource
   }
 `;
 
@@ -50,6 +52,11 @@ const resolvers = {
         deleteResource: async (_, { id }) => {
             await Resource.findByIdAndDelete(id);
             return "Item was successfully deleted.";
+        },
+        toggleResourceStatus: async (_, { id }) => {
+            const resource = await Resource.findById(id);
+            resource.isActive = !resource.isActive;
+            return await resource.save();
         }
     }
 };

@@ -33,7 +33,12 @@ const resourceSchema = new mongoose.Schema({
     description: { type: String },
     inStock: { type: Boolean, default: true },
 
-    imageUrl: { type: String }
+    imageUrl: { type: String },
+
+    isActive: {
+        type: Boolean,
+        default: false
+    }
 }, {
     timestamps: true
 });

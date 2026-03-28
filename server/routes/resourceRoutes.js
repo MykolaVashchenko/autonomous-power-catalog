@@ -5,10 +5,30 @@ const upload = require('../middleware/upload');
 const fs = require('fs');
 const path = require('path');
 
+
 router.get('/', async (req, res) => {
     try {
-        const resources = await Resource.find();
+        const filter = req.query.role === 'admin' ? {} : { isActive: true };
+
+        const resources = await Resource.find(filter);
         res.json(resources);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.patch('/:id/toggle-status', async (req, res) => {
+    try {
+        const resource = await Resource.findById(req.params.id);
+
+        if (!resource) {
+            return res.status(404).json({ message: 'Товар не найден' });
+        }
+
+        resource.isActive = !resource.isActive;
+        await resource.save();
+
+        res.json({ message: 'Статус успешно изменен', resource });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
