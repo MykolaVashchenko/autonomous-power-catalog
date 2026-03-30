@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useLocation } from 'react-router-dom';
-import './Authorization.css';
 
 function Authorization() {
     const location = useLocation();
@@ -20,7 +19,7 @@ function Authorization() {
         setError('');
 
         if (!email || !password) {
-            return setError('Будь ласка, заповніть усі поля');
+            return setError('Please fill in all fields');
         }
 
         if (isLogin) {
@@ -29,17 +28,15 @@ function Authorization() {
                 setMessage(response.data.message);
 
                 localStorage.setItem('token', response.data.token);
+                localStorage.setItem('userEmail', response.data.user.email);
+                localStorage.setItem('userRole', response.data.user.role);
 
                 setEmail('');
                 setPassword('');
 
-                localStorage.setItem('token', response.data.token);
-                localStorage.setItem('userEmail', response.data.user.email);
-                localStorage.setItem('userRole', response.data.user.role);
-
                 window.location.href = '/profile';
             } catch (err) {
-                setError(err.response?.data?.message || "Помилка входу");
+                setError(err.response?.data?.message || 'Login error');
             }
         } else {
             try {
@@ -48,50 +45,64 @@ function Authorization() {
                 setEmail('');
                 setPassword('');
             } catch (err) {
-                setError(err.response?.data?.message || 'Помилка реєстрації');
+                setError(err.response?.data?.message || 'Registration error');
             }
         }
     };
 
     return (
-        <div className="auth-container">
-            <h2 className="auth-title">{isLogin ? 'Вхід в акаунт' : 'Реєстрація'}</h2>
+        <div className="max-w-md mx-auto mt-20 p-8 border border-gray-200 rounded-xl bg-white shadow-lg">
+            <h2 className="text-center mb-6 text-gray-900 text-2xl font-bold tracking-tight">
+                {isLogin ? 'Log In' : 'Sign Up'}
+            </h2>
 
-            {error && <div className="auth-message-error">{error}</div>}
-            {message && <div className="auth-message-success">{message}</div>}
+            {error && (
+                <div className="mb-5 p-3 bg-red-50 border-l-4 border-red-600 text-red-700 text-sm font-medium text-center">
+                    {error}
+                </div>
+            )}
+            {message && (
+                <div className="mb-5 p-3 bg-green-50 border-l-4 border-green-600 text-green-700 text-sm font-medium text-center">
+                    {message}
+                </div>
+            )}
 
-            <form onSubmit={handleSubmit} className="auth-form">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
                 <input
                     type="email"
-                    placeholder="Електронна пошта"
+                    placeholder="E-mail"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="auth-input"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm transition-all focus:outline-none focus:border-black focus:ring-1 focus:ring-black shadow-sm"
                 />
 
                 <input
                     type={showPassword ? "text" : "password"}
-                    placeholder="Пароль"
+                    placeholder="Password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="auth-input"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm transition-all focus:outline-none focus:border-black focus:ring-1 focus:ring-black shadow-sm"
                 />
 
-                <label className="auth-checkbox-label">
+                <label className="flex items-center gap-2 text-sm cursor-pointer text-gray-600 select-none">
                     <input
                         type="checkbox"
                         checked={showPassword}
                         onChange={() => setShowPassword(!showPassword)}
+                        className="w-4 h-4 text-black border-gray-300 rounded focus:ring-black accent-black cursor-pointer"
                     />
-                    Показати пароль
+                    Show password
                 </label>
 
-                <button type="submit" className="auth-submit-btn">
-                    {isLogin ? 'Увійти' : 'Зареєструватися'}
+                <button
+                    type="submit"
+                    className="w-full py-3 mt-2 bg-black text-white rounded-md font-bold text-sm uppercase tracking-widest transition-all hover:bg-gray-800 active:scale-95 shadow-md"
+                >
+                    {isLogin ? 'Log In' : 'Sign Up'}
                 </button>
             </form>
 
-            <div className="auth-switch-container">
+            <div className="mt-6 text-center border-t border-gray-100 pt-6">
                 <button
                     type="button"
                     onClick={() => {
@@ -99,9 +110,9 @@ function Authorization() {
                         setMessage('');
                         setError('');
                     }}
-                    className="auth-switch-btn"
+                    className="text-sm text-gray-500 hover:text-black font-medium transition-colors underline underline-offset-4"
                 >
-                    {isLogin ? 'Немає акаунту? Зареєструватися' : 'Вже є акаунт? Увійти'}
+                    {isLogin ? "Don't have an account? Sign up" : "Already have an account? Log in"}
                 </button>
             </div>
         </div>

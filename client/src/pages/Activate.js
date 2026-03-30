@@ -4,9 +4,8 @@ import axios from 'axios';
 
 function Activate() {
     const { link } = useParams();
-    const [message, setMessage] = useState('Зачекайте, йде підтвердження...');
+    const [message, setMessage] = useState('Please wait, confirming');
     const [isSuccess, setIsSuccess] = useState(false);
-
     const [userEmail, setUserEmail] = useState('');
 
     useEffect(() => {
@@ -19,7 +18,7 @@ function Activate() {
                 }
                 setIsSuccess(true);
             } catch (error) {
-                setMessage(error.response?.data?.message || 'Помилка підтвердження або посилання застаріло');
+                setMessage(error.response?.data?.message || 'Confirmation error or link expired');
                 setIsSuccess(false);
             }
         };
@@ -28,17 +27,17 @@ function Activate() {
     }, [link]);
 
     return (
-        <div style={{ maxWidth: '400px', margin: '100px auto', textAlign: 'center', padding: '30px', border: '1px solid #ccc', borderRadius: '8px', backgroundColor: '#fff', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-            <h2 style={{ color: isSuccess ? '#155724' : '#dc3545', marginBottom: '20px' }}>
+        <div className="max-w-md mx-auto mt-24 text-center p-8 border border-gray-300 rounded-xl bg-white shadow-md">
+            <h2 className={`mb-5 text-xl font-semibold ${isSuccess ? 'text-gray-700' : 'text-red-600'}`}>
                 {message}
             </h2>
 
             <Link
                 to="/authorization"
                 state={{ prefilledEmail: userEmail }}
-                style={{ display: 'inline-block', padding: '10px 20px', backgroundColor: '#007bff', color: 'white', textDecoration: 'none', borderRadius: '4px', fontWeight: 'bold' }}
+                className="inline-block px-5 py-2.5 bg-black text-white rounded-lg font-bold transition-colors hover:bg-gray-800"
             >
-                Перейти до сторінки входу
+                Go to login page
             </Link>
         </div>
     );

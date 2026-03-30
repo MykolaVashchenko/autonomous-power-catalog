@@ -2,28 +2,43 @@ const Resource = require('../models/Resource');
 
 const createResource = async (req, res) => {
     try {
-        const { title, description, category, specifications, brand, model, price } = req.body;
-
-        const parsedSpecs = specifications ? JSON.parse(specifications) : {};
-        const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+        const {
+            name,
+            target,
+            bodyPart,
+            equipment,
+            difficulty,
+            secondaryMuscles,
+            exerciseTypes,
+            overview,
+            instructions,
+            gifUrl,
+            cardImageUrl,
+            youtubeLink
+        } = req.body;
 
         const newResource = new Resource({
-            title,
-            description,
-            category,
-            brand,
-            model,
-            price,
-            specifications: parsedSpecs,
-            imageUrl
+            name,
+            target,
+            bodyPart,
+            equipment,
+            difficulty,
+            secondaryMuscles,
+            exerciseTypes,
+            overview,
+            instructions,
+            gifUrl,
+            cardImageUrl,
+            youtubeLink,
+            isActive: false
         });
 
-        await newResource.save();
+        const savedResource = await newResource.save();
 
-        res.status(201).json({ message: 'Товар успішно додано!', resource: newResource });
-    } catch (e) {
-        console.error("Помилка при додаванні товару:", e);
-        res.status(500).json({ message: 'Помилка на сервері при додаванні товару' });
+        res.status(201).json({ message: 'Exercise successfully added', resource: savedResource });
+    } catch (error) {
+        console.error("Error adding exercise:", error);
+        res.status(500).json({ message: 'Server error while adding exercise' });
     }
 };
 

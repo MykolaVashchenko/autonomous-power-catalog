@@ -23,7 +23,7 @@ const register = async (req, res) => {
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            return res.status(400).json({ message: "Incorrect email format" });
+            return res.status(400).json({ message: "Invalid email format" });
         }
 
         const candidate = await User.findOne({ email });
@@ -46,67 +46,64 @@ const register = async (req, res) => {
         await transporter.sendMail({
             from: 'admin@resource-center.com',
             to: email,
-            subject: 'Sign up completion at resource-center',
+            subject: 'Account activation at Gym Resource Centre',
             html: `
-        <div>
-          <h1>Welcome to resource-center!</h1>
-          <p>To complete sign up follow the link below:</p>
-          <a href="${activationUrl}">Confirm sign up</a> 
-        </div>
-    `
+                <div style="font-family: sans-serif; padding: 20px;">
+                    <h1>Welcome to Gym Resource Centre!</h1>
+                    <p>To complete your registration, please follow the link below:</p>
+                    <a href="${activationUrl}" style="display: inline-block; padding: 10px 20px; background-color: #000; color: #fff; text-decoration: none; border-radius: 5px;">Confirm Registration</a>
+                </div>
+            `
         });
 
-        return res.status(201).json({ message: "Mail for sign up completion was sent to email" });
+        return res.status(201).json({ message: "Activation email has been sent" });
     } catch (e) {
-        res.status(500).json({ message: e.message || "Error during signup" });
+        res.status(500).json({ message: e.message || "Registration error" });
     }
 };
-
 
 const activate = async (req, res) => {
     try {
         const activationLink = req.params.link;
-
         const user = await User.findOne({ activationLink });
 
         if (!user) {
-            return res.status(400).json({ message: "Некоректне посилання для активації" });
+            return res.status(400).json({ message: "Invalid or expired activation link" });
         }
 
         user.isActivated = true;
+        user.activationLink = null;
         await user.save();
 
         return res.status(200).json({
-            message: "Акаунт успішно активовано!",
+            message: "Account successfully activated!",
             email: user.email
         });
     } catch (e) {
-        console.log(e);
-        res.status(500).json({ message: "Помилка при активації" });
+        res.status(500).json({ message: "Activation error" });
     }
 };
-
 
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
         if (!email || !password) {
-            return res.status(400).json({ message: "Заповніть усі поля" });
+            return res.status(400).json({ message: "Please fill in all fields" });
         }
 
         const user = await User.findOne({ email });
         if (!user) {
-            return res.status(400).json({ message: "Користувача з таким email не знайдено" });
+            return res.status(400).json({ message: "User with this email not found" });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(400).json({ message: "Невірний пароль" });
+            return res.status(400).json({ message: "Invalid password" });
         }
 
         if (!user.isActivated) {
-            return res.status(400).json({ message: "Будь ласка, підтвердіть пошту (перейдіть за посиланням у листі)" });
+            return res.status(400).json({ message: "Please confirm your email first" });
         }
 
         const token = jwt.sign(
@@ -116,16 +113,14 @@ const login = async (req, res) => {
         );
 
         res.status(200).json({
-            message: "Вхід успішний!",
+            message: "Login successful!",
             token,
             user: { id: user._id, email: user.email, role: user.role }
         });
 
     } catch (e) {
-        console.error("Помилка логіну:", e);
-        res.status(500).json({ message: "Помилка при вході в систему" });
+        res.status(500).json({ message: "Server error during login" });
     }
 };
 
 module.exports = { register, activate, login };
-

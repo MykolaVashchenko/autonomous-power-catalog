@@ -1,46 +1,22 @@
 const mongoose = require('mongoose');
 
-const resourceSchema = new mongoose.Schema({
-    title: {
-        type: String,
-        required: [true, 'Item name is required'],
-        trim: true
-    },
-    category: {
-        type: String,
-        required: true,
-        enum: ['battery', 'inverter', 'solar_panel', 'bms', 'accessories'],
-        default: 'battery'
-    },
-    brand: {
-        type: String,
-        required: true
-    },
-    model: {
-        type: String,
-        required: true
-    },
-    price: {
-        type: Number,
-        required: true,
-        min: [0, 'Price cannot be negative']
-    },
+const ResourceSchema = new mongoose.Schema({
+    name: { type: String, required: true, trim: true },
+    target: { type: String, required: true },
+    bodyPart: { type: String, required: true },
+    equipment: { type: String, required: true },
+    difficulty: { type: String, enum: ['beginner', 'intermediate', 'advanced'], default: 'beginner' },
+    instructions: { type: [String], required: true },
+    secondaryMuscles: { type: [String], default: [] },
+    exerciseTypes: { type: [String], default: [] },
+    overview: { type: String, required: true },
+    cardImageUrl: { type: String, required: true },
+    gifUrl: { type: String, required: true },
 
-    specifications: {
-        type: Object,
-        default: {}
-    },
-    description: { type: String },
-    inStock: { type: Boolean, default: true },
-
-    imageUrl: { type: String },
-
-    isActive: {
-        type: Boolean,
-        default: false
-    }
+    youtubeLink: { type: String, trim: true },
+    isActive: { type: Boolean, default: false }
 }, {
     timestamps: true
 });
 
-module.exports = mongoose.models.Resource || mongoose.model('Resource', resourceSchema);
+module.exports = mongoose.models.Resource || mongoose.model('Resource', ResourceSchema);

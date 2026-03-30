@@ -2,11 +2,16 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-function Catalog() {
+function Catalog({ apiType }) {
     const [resources, setResources] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [apiType, setApiType] = useState('rest');
+    const [selectedItem, setSelectedItem] = useState(null);
+
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('All');
+    const [selectedEquipment, setSelectedEquipment] = useState('All');
+    const [selectedDifficulty, setSelectedDifficulty] = useState('All');
 
     const userRole = localStorage.getItem('userRole');
     const token = localStorage.getItem('token');
@@ -25,7 +30,7 @@ function Catalog() {
                     const graphqlQuery = {
                         query: `{
                             getResources {
-                                _id title category brand model price imageUrl isActive
+                                _id name target bodyPart equipment difficulty gifUrl cardImageUrl isActive overview secondaryMuscles exerciseTypes instructions youtubeLink
                             }
                         }`
                     };
@@ -44,21 +49,20 @@ function Catalog() {
                 setResources(fetchedData);
                 setLoading(false);
             } catch (err) {
-                console.error(`Помилка завантаження через ${apiType.toUpperCase()}:`, err);
-                setError(`Не вдалося завантажити товари через ${apiType.toUpperCase()}.`);
+                setError(`Failed to load exercises via ${apiType.toUpperCase()}.`);
                 setLoading(false);
             }
         };
         fetchResources();
     }, [apiType, userRole]);
 
-    const handleDelete = async (id, title) => {
-        if (!window.confirm(`Ви впевнені, що хочете видалити "${title}"?`)) return;
+    const handleDelete = async (id, name) => {
+        if (!window.confirm(`Are you sure you want to delete "${name}"?`)) return;
         try {
-            await axios.delete(`/api/resources/${id}`, { headers: { Authorization: `Bearer ${token}` }});
+            await axios.delete(`/api/resources/${id}`, { headers: { Authorization: `Bearer ${token}` } });
             setResources(resources.filter(item => item._id !== id));
         } catch (err) {
-            alert(err.response?.data?.message || 'Помилка при видаленні товару');
+            alert(err.response?.data?.message || 'Error deleting exercise');
         }
     };
 
@@ -68,13 +72,11 @@ function Catalog() {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            // Оновлюємо стан React, щоб миттєво перемалювати картку
             setResources(resources.map(item =>
                 item._id === id ? { ...item, isActive: !item.isActive } : item
             ));
         } catch (err) {
-            console.error("Помилка зміни статусу:", err);
-            alert('Не вдалося змінити статус товару');
+            alert('Failed to change status');
         }
     };
 
@@ -82,100 +84,226 @@ function Catalog() {
         navigate(`/admin/edit/${id}`);
     };
 
-    const categoryNames = {
-        battery: 'Акумулятор',
-        inverter: 'Інвертор',
-        solar_panel: 'Сонячна панель',
-        bms: 'BMS Плата',
-        accessories: 'Комплектуючі'
+    const getDifficultyColor = (difficulty) => {
+        if (difficulty === 'beginner') return 'text-green-600';
+        if (difficulty === 'intermediate') return 'text-yellow-500';
+        if (difficulty === 'advanced') return 'text-red-600';
+        return 'text-gray-600';
     };
 
+    const uniqueCategories = ['All', ...new Set(resources.map(item => item.bodyPart))];
+    const uniqueEquipments = ['All', ...new Set(resources.map(item => item.equipment))];
+    const uniqueDifficulties = ['All', ...new Set(resources.map(item => item.difficulty))];
+
+    const filteredResources = resources.filter(item => {
+        const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesCategory = selectedCategory === 'All' || item.bodyPart === selectedCategory;
+        const matchesEquipment = selectedEquipment === 'All' || item.equipment === selectedEquipment;
+        const matchesDifficulty = selectedDifficulty === 'All' || item.difficulty === selectedDifficulty;
+
+        return matchesSearch && matchesCategory && matchesEquipment && matchesDifficulty;
+    });
+
     return (
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-            <h1 style={{ textAlign: 'center', marginBottom: '20px', color: '#333' }}>Каталог Ресурсів</h1>
+        <div className="max-w-7xl mx-auto px-4 py-8">
+            <div className="mb-10 flex flex-col items-center gap-6">
+                <input
+                    type="text"
+                    placeholder="Search exercises (e.g. Squat)..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full max-w-2xl px-6 py-4 rounded-full border-2 border-gray-100 shadow-sm focus:outline-none focus:border-black transition-all text-lg"
+                />
 
-            {/* Кнопка "Додати товар" */}
-            {userRole === 'admin' && (
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
-                    <button onClick={() => navigate('/admin')} style={{ padding: '12px 24px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-                        <span>➕</span> Додати новий товар
-                    </button>
+                <div className="w-full flex flex-col gap-6 items-center">
+                    <div className="w-full">
+                        <p className="text-center text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Body Part</p>
+                        <div className="flex gap-2 flex-wrap justify-center">
+                            {uniqueCategories.map(category => (
+                                <button
+                                    key={category}
+                                    onClick={() => setSelectedCategory(category)}
+                                    className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${selectedCategory === category ? 'bg-black text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                                >
+                                    {category}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="w-full">
+                        <p className="text-center text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Equipment</p>
+                        <div className="flex gap-2 flex-wrap justify-center">
+                            {uniqueEquipments.map(eq => (
+                                <button
+                                    key={eq}
+                                    onClick={() => setSelectedEquipment(eq)}
+                                    className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${selectedEquipment === eq ? 'bg-black text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                                >
+                                    {eq}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="w-full">
+                        <p className="text-center text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Difficulty</p>
+                        <div className="flex gap-2 flex-wrap justify-center">
+                            {uniqueDifficulties.map(diff => (
+                                <button
+                                    key={diff}
+                                    onClick={() => setSelectedDifficulty(diff)}
+                                    className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${selectedDifficulty === diff ? 'bg-black text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                                >
+                                    {diff}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
-            )}
-
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '30px', gap: '10px' }}>
-                <button onClick={() => setApiType('rest')} style={{ padding: '10px 20px', border: '2px solid #007bff', backgroundColor: apiType === 'rest' ? '#007bff' : 'white', color: apiType === 'rest' ? 'white' : '#007bff', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s' }}>REST API</button>
-                <button onClick={() => setApiType('graphql')} style={{ padding: '10px 20px', border: '2px solid #e535ab', backgroundColor: apiType === 'graphql' ? '#e535ab' : 'white', color: apiType === 'graphql' ? 'white' : '#e535ab', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s' }}>GraphQL</button>
             </div>
 
             {loading ? (
-                <h2 style={{ textAlign: 'center', marginTop: '50px' }}>Завантаження вітрини... ⏳</h2>
+                <div className="text-center mt-20">
+                    <h2 className="text-2xl font-bold text-gray-700">Loading exercises... ⏳</h2>
+                </div>
             ) : error ? (
-                <h2 style={{ textAlign: 'center', color: 'red', marginTop: '50px' }}>{error}</h2>
-            ) : resources.length === 0 ? (
-                <p style={{ textAlign: 'center', fontSize: '18px', color: '#666' }}>Товарів поки немає.</p>
+                <div className="text-center mt-20">
+                    <h2 className="text-xl font-bold text-red-600">{error}</h2>
+                </div>
+            ) : filteredResources.length === 0 ? (
+                <div className="text-center py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+                    <p className="text-xl text-gray-400 font-medium">No exercises found matching your criteria.</p>
+                </div>
             ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-                    {resources.map((item) => (
-                        <div key={item._id} style={{
-                            border: '1px solid #e0e0e0',
-                            borderRadius: '8px',
-                            overflow: 'hidden',
-                            // ВІЗУАЛ: Якщо неактивний, робимо фон сірим і трохи прозорим
-                            backgroundColor: item.isActive ? '#fff' : '#f8f9fa',
-                            opacity: item.isActive ? 1 : 0.6,
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            position: 'relative'
-                        }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {filteredResources.map((item) => (
+                        <div key={item._id} className={`group relative flex flex-col rounded-2xl border border-gray-100 bg-white transition-all hover:shadow-xl hover:-translate-y-1 ${!item.isActive && 'opacity-60'}`}>
 
                             {userRole === 'admin' && !item.isActive && (
-                                <div style={{ position: 'absolute', top: '10px', left: '10px', backgroundColor: '#dc3545', color: 'white', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', zIndex: 10 }}>
-                                    Чернетка
+                                <div className="absolute top-4 left-4 bg-red-600 text-white px-2 py-1 rounded text-[10px] font-black uppercase z-10">
+                                    Draft
                                 </div>
                             )}
 
                             {userRole === 'admin' && (
-                                <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '5px', zIndex: 10 }}>
-
-                                    <button
-                                        onClick={() => handleToggleStatus(item._id)}
-                                        title={item.isActive ? "Приховати (Зробити чернеткою)" : "Опублікувати"}
-                                        style={{ width: '30px', height: '30px', backgroundColor: 'rgba(255, 255, 255, 0.9)', border: '1px solid #ccc', borderRadius: '50%', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '14px' }}
-                                    >
-                                        {item.isActive ? '🙈' : '👁️'}
+                                <div className="absolute top-4 right-4 flex gap-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => handleToggleStatus(item._id)} className="p-2 bg-white/90 backdrop-blur rounded-full shadow-sm hover:bg-black hover:text-white transition-colors">
+                                        {item.isActive ? '🕶️' : '👁️'}
                                     </button>
-
-                                    <button onClick={() => handleEdit(item._id)} title="Редагувати" style={{ width: '30px', height: '30px', backgroundColor: 'rgba(255, 255, 255, 0.9)', border: '1px solid #ccc', borderRadius: '50%', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '14px' }}>✏️</button>
-                                    <button onClick={() => handleDelete(item._id, item.title)} title="Видалити" style={{ width: '30px', height: '30px', backgroundColor: 'rgba(255, 255, 255, 0.9)', border: '1px solid #ccc', borderRadius: '50%', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '14px' }}>❌</button>
+                                    <button onClick={() => handleEdit(item._id)} className="p-2 bg-white/90 backdrop-blur rounded-full shadow-sm hover:bg-black hover:text-white transition-colors">
+                                        ✏️
+                                    </button>
+                                    <button onClick={() => handleDelete(item._id, item.name)} className="p-2 bg-white/90 backdrop-blur rounded-full shadow-sm hover:bg-red-600 hover:text-white transition-colors">
+                                        ❌
+                                    </button>
                                 </div>
                             )}
 
-                            <div style={{ height: '200px', backgroundColor: '#f9f9f9', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                                {item.imageUrl ? (
-                                    <img src={`http://localhost:5000${item.imageUrl}`} alt={item.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                            <div className="aspect-square p-6 flex items-center justify-center bg-white rounded-t-2xl overflow-hidden">
+                                {item.cardImageUrl ? (
+                                    <img
+                                        src={item.cardImageUrl}
+                                        alt={item.name}
+                                        onClick={() => setSelectedItem(item)}
+                                        className="max-h-full max-w-full object-contain cursor-pointer transition-transform duration-500 group-hover:scale-105"
+                                    />
                                 ) : (
-                                    <span style={{ color: '#aaa' }}>Немає фото</span>
+                                    <span className="text-gray-300">No image</span>
                                 )}
                             </div>
 
-                            <div style={{ padding: '15px', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-                                <div style={{ fontSize: '12px', color: '#888', textTransform: 'uppercase', marginBottom: '5px' }}>{categoryNames[item.category] || item.category}</div>
-                                <h3 style={{ margin: '0 0 10px 0', fontSize: '18px', color: '#333' }}>{item.title}</h3>
-                                <p style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#666', flexGrow: 1 }}>
-                                    <strong>Бренд:</strong> {item.brand} <br/>
-                                    <strong>Модель:</strong> {item.model}
-                                </p>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
-                                    <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#28a745' }}>{item.price} ₴</span>
-                                    <button disabled={!item.isActive} style={{ padding: '8px 15px', backgroundColor: item.isActive ? '#007bff' : '#ccc', color: 'white', border: 'none', borderRadius: '4px', cursor: item.isActive ? 'pointer' : 'not-allowed', fontWeight: 'bold' }}>
-                                        Детальніше
+                            <div className="p-6 pt-0 flex flex-col flex-grow">
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">
+                                    {item.bodyPart}
+                                </span>
+                                <h3 className="text-lg font-bold text-gray-900 capitalize mb-4 leading-tight">
+                                    {item.name}
+                                </h3>
+
+                                <div className="space-y-1 mb-6 text-sm text-gray-500">
+                                    <p><strong>Target:</strong> <span className="capitalize">{item.target}</span></p>
+                                    <p><strong>Equipment:</strong> <span className="capitalize">{item.equipment}</span></p>
+                                </div>
+
+                                <div className="mt-auto flex items-center justify-between">
+                                    <span className={`text-[10px] font-black uppercase tracking-widest ${getDifficultyColor(item.difficulty)}`}>
+                                        {item.difficulty}
+                                    </span>
+                                    <button
+                                        disabled={!item.isActive && userRole !== 'admin'}
+                                        onClick={() => setSelectedItem(item)}
+                                        className="px-5 py-2 bg-black text-white text-xs font-bold rounded-lg hover:bg-gray-800 transition-colors uppercase tracking-widest disabled:bg-gray-200 disabled:cursor-not-allowed"
+                                    >
+                                        Details
                                     </button>
                                 </div>
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {selectedItem && (
+                <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-md" onClick={() => setSelectedItem(null)}>
+                    <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden relative shadow-2xl flex flex-col md:flex-row" onClick={(e) => e.stopPropagation()}>
+
+                        <button onClick={() => setSelectedItem(null)} className="absolute top-6 right-6 w-10 h-10 bg-black text-white rounded-full flex items-center justify-center font-bold z-50 hover:scale-110 transition-transform">
+                            ✕
+                        </button>
+
+                        <div className="md:w-1/2 bg-gray-50 flex items-center justify-center p-8 border-b md:border-b-0 md:border-r border-gray-100">
+                            <img src={selectedItem.gifUrl} alt={selectedItem.name} className="max-h-full max-w-full rounded-xl mix-blend-multiply" />
+                        </div>
+
+                        <div className="md:w-1/2 p-8 sm:p-12 overflow-y-auto">
+                            <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tighter mb-6">
+                                {selectedItem.name}
+                            </h2>
+
+                            <div className="flex flex-wrap gap-2 mb-8">
+                                <span className="px-3 py-1.5 bg-gray-100 rounded-md text-[10px] font-bold text-gray-600 uppercase tracking-widest">
+                                    🎯 {selectedItem.target}
+                                </span>
+                                {selectedItem.exerciseTypes?.map(type => (
+                                    <span key={type} className="px-3 py-1.5 bg-black text-white rounded-md text-[10px] font-bold uppercase tracking-widest">
+                                        ⚡ {type}
+                                    </span>
+                                ))}
+                                {selectedItem.secondaryMuscles?.map(muscle => (
+                                    <span key={muscle} className="px-3 py-1.5 border border-gray-200 text-gray-500 rounded-md text-[10px] font-bold uppercase tracking-widest">
+                                        🔄 {muscle}
+                                    </span>
+                                ))}
+                            </div>
+
+                            {selectedItem.overview && (
+                                <div className="mb-8 p-6 bg-gray-50 rounded-2xl border-l-4 border-black">
+                                    <p className="text-gray-600 text-sm leading-relaxed italic">
+                                        "{selectedItem.overview}"
+                                    </p>
+                                </div>
+                            )}
+
+                            <h3 className="text-sm font-black uppercase tracking-widest text-gray-900 mb-4 pb-2 border-b-2 border-gray-100">
+                                Execution Steps
+                            </h3>
+                            <ul className="space-y-4 mb-10 text-sm text-gray-600 leading-relaxed">
+                                {selectedItem.instructions?.map((step, index) => (
+                                    <li key={index} className="flex gap-4">
+                                        <span className="font-black text-black">{index + 1}.</span>
+                                        <span>{step}</span>
+                                    </li>
+                                ))}
+                            </ul>
+
+                            {selectedItem.youtubeLink && (
+                                <a href={selectedItem.youtubeLink} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-3 w-full py-4 bg-[#FF0000] text-white rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-[#CC0000] transition-colors shadow-lg shadow-red-200">
+                                    Watch Video Tutorial
+                                </a>
+                            )}
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

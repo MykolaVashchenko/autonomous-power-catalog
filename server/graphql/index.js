@@ -1,25 +1,20 @@
-const Resource = require('../models/resource');
+const Resource = require('../models/Resource');
 
 const typeDefs = `#graphql
-  type Specifications {
-    formFactor: String
-    capacity: String
-    voltage: String
-    power: String
-    waveType: String
-    inputVoltage: String
-  }
-
   type Resource {
     _id: ID!
-    title: String!
-    category: String!
-    brand: String
-    model: String
-    price: Float     
-    imageUrl: String
-    specifications: Specifications
-    description: String
+    name: String!
+    target: String!
+    bodyPart: String!
+    equipment: String!
+    difficulty: String!
+    secondaryMuscles: [String]
+    exerciseTypes: [String]
+    overview: String!
+    instructions: [String]
+    gifUrl: String!
+    cardImageUrl: String!
+    youtubeLink: String
     isActive: Boolean
   }
 
@@ -29,7 +24,7 @@ const typeDefs = `#graphql
   }
 
   type Mutation {
-    addResource(title: String!, category: String!, brand: String!, model: String!, price: Float!, imageUrl: String, description: String): Resource
+    addResource(name: String!, target: String!, bodyPart: String!, equipment: String!, difficulty: String!, secondaryMuscles: [String],exerciseTypes: [String], overview: String!, instructions: [String], gifUrl: String!, cardImageUrl: String!, youtubeLink: String): Resource
     deleteResource(id: ID!): String
     toggleResourceStatus(id: ID!): Resource
   }

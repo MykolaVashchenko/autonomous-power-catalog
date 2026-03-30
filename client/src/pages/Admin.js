@@ -1,25 +1,30 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 function Admin() {
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [brand, setBrand] = useState(''); // Окремий стан для бренду
-    const [model, setModel] = useState(''); // ДОДАЛИ СТАН
-    const [price, setPrice] = useState(''); // Окремий стан для ціни
-    const [image, setImage] = useState(null);
+    const navigate = useNavigate();
 
-    const [category, setCategory] = useState('battery');
-    const [specs, setSpecs] = useState({});
+    const [formData, setFormData] = useState({
+        name: '',
+        target: '',
+        bodyPart: 'back',
+        equipment: 'barbell',
+        difficulty: 'beginner',
+        secondaryMuscles: '',
+        exerciseTypes: 'strength',
+        overview: '',
+        instructions: '',
+        gifUrl: '',
+        cardImageUrl: '',
+        youtubeLink: ''
+    });
 
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
 
-    const handleSpecChange = (e) => {
-        setSpecs({
-            ...specs,
-            [e.target.name]: e.target.value
-        });
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
     const handleSubmit = async (e) => {
@@ -27,124 +32,153 @@ function Admin() {
         setMessage('');
         setError('');
 
-        if (!title || !description || !brand || !model || !price) {
-            return setError('Заповніть усі обов\'язкові поля (Назва, Опис, Бренд, Модель, Ціна)');
-        }
-
-        const formData = new FormData();
-        formData.append('title', title);
-        formData.append('description', description);
-        formData.append('brand', brand);
-        formData.append('model', model);
-        formData.append('price', price);
-        formData.append('category', category);
-        formData.append('specifications', JSON.stringify(specs));
-
-        if (image) {
-            formData.append('image', image);
-        }
-
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.post('/api/resources', formData, {
+
+            const instructionsArray = formData.instructions.split('\n').filter(line => line.trim() !== '');
+            const secondaryMusclesArray = formData.secondaryMuscles.split(',').map(item => item.trim()).filter(item => item !== '');
+            const exerciseTypesArray = [formData.exerciseTypes];
+
+            const dataToSend = {
+                ...formData,
+                instructions: instructionsArray,
+                secondaryMuscles: secondaryMusclesArray,
+                exerciseTypes: exerciseTypesArray
+            };
+
+            await axios.post('/api/resources', dataToSend, {
                 headers: {
-                    'Content-Type': 'multipart/form-data',
+                    'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`
                 }
             });
 
-            setMessage('Товар успішно додано!');
-            setTitle('');
-            setDescription('');
-            setBrand('');
-            setModel('');
-            setPrice('');
-            setImage(null);
-            setSpecs({});
-            document.getElementById('imageInput').value = '';
+            setMessage('Exercise successfully added to the database!');
+            setTimeout(() => navigate('/'), 1500);
         } catch (err) {
-            setError(err.response?.data?.message || 'Помилка при додаванні товару');
+            setError(err.response?.data?.message || 'Error adding exercise');
         }
     };
 
+    const inputClasses = "w-full px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-1 focus:ring-black focus:border-black outline-none transition-all text-sm";
+    const labelClasses = "block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5";
+
     return (
-        <div style={{ maxWidth: '600px', margin: '50px auto', padding: '20px', border: '1px solid #ccc', borderRadius: '8px', backgroundColor: '#fff' }}>
-            <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Панель Адміністратора</h2>
+        <div className="min-h-screen py-12 px-4">
+            <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                <div className="bg-white border-b border-gray-100 px-8 py-6 text-center">
+                    <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Add New Exercise</h2>
 
-            {error && <div style={{ color: 'red', marginBottom: '15px', textAlign: 'center', backgroundColor: '#f8d7da', padding: '10px', borderRadius: '4px' }}>{error}</div>}
-            {message && <div style={{ color: 'green', marginBottom: '15px', textAlign: 'center', backgroundColor: '#d4edda', padding: '10px', borderRadius: '4px' }}>{message}</div>}
-
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-
-                <input type="text" placeholder="Назва ресурсу" value={title} onChange={(e) => setTitle(e.target.value)} style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc' }} />
-
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    <input type="text" placeholder="Бренд" value={brand} onChange={(e) => setBrand(e.target.value)} style={{ flex: 1, padding: '10px', borderRadius: '4px', border: '1px solid #ccc' }} />
-                    <input type="text" placeholder="Модель" value={model} onChange={(e) => setModel(e.target.value)} style={{ flex: 1, padding: '10px', borderRadius: '4px', border: '1px solid #ccc' }} />
-                    <input type="number" placeholder="Ціна (₴)" value={price} onChange={(e) => setPrice(e.target.value)} style={{ flex: 1, padding: '10px', borderRadius: '4px', border: '1px solid #ccc' }} />
                 </div>
 
-                <textarea placeholder="Опис ресурсу..." value={description} onChange={(e) => setDescription(e.target.value)} rows="3" style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', resize: 'vertical' }} />
-
-
-                <div>
-                    <label style={{ fontWeight: 'bold' }}>Категорія:</label>
-                    <select
-                        value={category}
-                        onChange={(e) => {
-                            setCategory(e.target.value);
-                            setSpecs({});
-                        }}
-                        style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '4px' }}
-                    >
-                        <option value="battery">Акумулятори (18650, LiFePO4 тощо)</option>
-                        <option value="inverter">Інвертори</option>
-                        <option value="solar_panel">Сонячні панелі</option>
-                        <option value="bms">BMS Плати</option>
-                        <option value="accessories">Інше (Комплектуючі)</option>
-                    </select>
-                </div>
-
-                <div style={{ padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '4px', border: '1px solid #e9ecef' }}>
-                    <h4 style={{ marginTop: 0 }}>Технічні характеристики:</h4>
-
-                    {category === 'battery' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <input type="text" name="formFactor" value={specs.formFactor || ''} placeholder="Форм-фактор (напр. 18650)" onChange={handleSpecChange} style={{ padding: '8px' }} />
-                            <input type="number" name="capacity" value={specs.capacity || ''} placeholder="Ємність (mAh)" onChange={handleSpecChange} style={{ padding: '8px' }} />
-                            <input type="number" step="0.1" name="voltage" value={specs.voltage || ''} placeholder="Номінальна напруга (V)" onChange={handleSpecChange} style={{ padding: '8px' }} />
+                <div className="px-8 py-8">
+                    {error && (
+                        <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-600 text-red-700 text-sm font-medium">
+                            {error}
+                        </div>
+                    )}
+                    {message && (
+                        <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-600 text-green-700 text-sm font-medium">
+                            {message}
                         </div>
                     )}
 
-                    {category === 'inverter' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <input type="number" name="power" value={specs.power || ''} placeholder="Потужність (W)" onChange={handleSpecChange} style={{ padding: '8px' }} />
-                            <input type="text" name="waveType" value={specs.waveType || ''} placeholder="Тип синусоїди (чиста/модифікована)" onChange={handleSpecChange} style={{ padding: '8px' }} />
-                            <input type="text" name="inputVoltage" value={specs.inputVoltage || ''} placeholder="Вхідна напруга (напр. 12V, 24V)" onChange={handleSpecChange} style={{ padding: '8px' }} />
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className={labelClasses}>Exercise Name</label>
+                                <input type="text" name="name" value={formData.name} onChange={handleChange} required className={inputClasses} />
+                            </div>
+                            <div>
+                                <label className={labelClasses}>Target Muscle</label>
+                                <input type="text" name="target" value={formData.target} onChange={handleChange} required className={inputClasses} />
+                            </div>
                         </div>
-                    )}
 
-                    {category === 'solar_panel' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <input type="number" name="power" value={specs.power || ''} placeholder="Потужність (W)" onChange={handleSpecChange} style={{ padding: '8px' }} />
-                            <input type="number" step="0.1" name="voltage" value={specs.voltage || ''} placeholder="Робоча напруга (V)" onChange={handleSpecChange} style={{ padding: '8px' }} />
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <label className={labelClasses}>Body Part</label>
+                                <select name="bodyPart" value={formData.bodyPart} onChange={handleChange} className={inputClasses}>
+                                    <option value="back">Back</option>
+                                    <option value="cardio">Cardio</option>
+                                    <option value="chest">Chest</option>
+                                    <option value="lower arms">Lower Arms</option>
+                                    <option value="lower legs">Lower Legs</option>
+                                    <option value="shoulders">Shoulders</option>
+                                    <option value="upper arms">Upper Arms</option>
+                                    <option value="upper legs">Upper Legs</option>
+                                    <option value="waist">Waist (Core)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className={labelClasses}>Equipment</label>
+                                <select name="equipment" value={formData.equipment} onChange={handleChange} className={inputClasses}>
+                                    <option value="barbell">Barbell</option>
+                                    <option value="dumbbell">Dumbbell</option>
+                                    <option value="cable">Cable</option>
+                                    <option value="machine">Machine</option>
+                                    <option value="smith machine">Smith Machine</option>
+                                    <option value="body weight">Body Weight</option>
+                                    <option value="band">Band</option>
+                                    <option value="weighted">Weighted</option>
+                                    <option value="kettlebell">Kettlebell</option>
+                                    <option value="assisted">Assisted</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className={labelClasses}>Difficulty</label>
+                                <select name="difficulty" value={formData.difficulty} onChange={handleChange} className={inputClasses}>
+                                    <option value="beginner">Beginner</option>
+                                    <option value="intermediate">Intermediate</option>
+                                    <option value="advanced">Advanced</option>
+                                </select>
+                            </div>
                         </div>
-                    )}
 
-                    {(category === 'accessories' || category === 'bms') && (
-                        <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>Специфічні параметри можна вказати в описі.</p>
-                    )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className={labelClasses}>Static Image URL</label>
+                                <input type="text" name="cardImageUrl" value={formData.cardImageUrl} onChange={handleChange} required className={inputClasses} />
+                            </div>
+                            <div>
+                                <label className={labelClasses}>GIF URL</label>
+                                <input type="text" name="gifUrl" value={formData.gifUrl} onChange={handleChange} required className={inputClasses} />
+                            </div>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div>
+                                <label className={labelClasses}>Overview</label>
+                                <textarea name="overview" value={formData.overview} onChange={handleChange} required rows="3" className={`${inputClasses} resize-none`}></textarea>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className={labelClasses}>Secondary Muscles</label>
+                                    <input type="text" name="secondaryMuscles" value={formData.secondaryMuscles} onChange={handleChange} className={inputClasses} />
+                                </div>
+                                <div>
+                                    <label className={labelClasses}>Exercise Type</label>
+                                    <select name="exerciseTypes" value={formData.exerciseTypes} onChange={handleChange} className={inputClasses}>
+                                        <option value="strength">Strength</option>
+                                        <option value="mobility">Mobility</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className={labelClasses}>Instructions</label>
+                            <textarea name="instructions" value={formData.instructions} onChange={handleChange} required rows="5" className={`${inputClasses} resize-none`}></textarea>
+                        </div>
+
+                        <div className="pt-4 border-t border-gray-100 text-center">
+                            <button type="submit" className="px-10 py-3 bg-black text-white font-bold rounded-md hover:bg-gray-800 transition-all shadow-md hover:shadow-lg active:scale-95 text-sm uppercase tracking-widest">
+                                Save Exercise
+                            </button>
+                        </div>
+                    </form>
                 </div>
-
-                <div style={{ border: '1px dashed #ccc', padding: '15px', borderRadius: '4px', textAlign: 'center' }}>
-                    <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>Зображення товару:</label>
-                    <input id="imageInput" type="file" accept="image/*" onChange={(e) => setImage(e.target.files[0])} />
-                </div>
-
-                <button type="submit" style={{ padding: '12px', background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}>
-                    Додати ресурс
-                </button>
-            </form>
+            </div>
         </div>
     );
 }
