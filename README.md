@@ -1,1 +1,1 @@
-# Gym recource centre
+# Gym resource centre
