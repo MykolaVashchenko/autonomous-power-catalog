@@ -18,13 +18,14 @@ function Catalog({ apiType }) {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const fetchResources = async () => {
-            setLoading(true);
+        const fetchResources = async (isBackground = false) => {
+            if (!isBackground) setLoading(true);
             setError('');
+
             try {
                 let fetchedData = [];
                 if (apiType === 'rest') {
-                    const response = await axios.get(`/api/resources?role=${userRole}`);
+                    const response = await axios.get(`/api/resources?role=${userRole}&t=${Date.now()}`);
                     fetchedData = response.data;
                 } else {
                     const graphqlQuery = {
@@ -47,13 +48,22 @@ function Catalog({ apiType }) {
                     }
                 }
                 setResources(fetchedData);
-                setLoading(false);
             } catch (err) {
-                setError(`Failed to load exercises via ${apiType.toUpperCase()}.`);
-                setLoading(false);
+                if (!isBackground) setError(`Failed to load exercises via ${apiType.toUpperCase()}.`);
+            } finally {
+                if (!isBackground) setLoading(false);
             }
         };
+
         fetchResources();
+
+
+        const intervalId = setInterval(() => {
+            fetchResources(true);
+        }, 3000);
+
+        return () => clearInterval(intervalId);
+
     }, [apiType, userRole]);
 
     const handleDelete = async (id, name) => {
