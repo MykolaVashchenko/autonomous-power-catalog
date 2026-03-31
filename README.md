@@ -1,1 +1,1 @@
-# autonomous-power-catalog
+# Gym recource centre
